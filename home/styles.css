@@ -1,0 +1,421 @@
+/* ===================================================== 
+   Air Quality Dashboard — Index Page
+   Dark, atmospheric, glassmorphism aesthetic 
+===================================================== */
+
+:root {
+    --bg-deep:        #2d3748;
+    --bg-mid:         #4a5568;
+    --text:           #f4f8fc;
+    --text-soft:      #d2dae4;
+    --text-dim:       #9aa8b8;
+    --glass-bg:       rgba(18, 27, 36, 0.52);
+    --glass-bg-hover: rgba(22, 34, 45, 0.66);
+    --glass-border:   rgba(255, 255, 255, 0.14);
+    --glass-border-h: rgba(140, 255, 170, 0.38);
+    --accent-toxic:   #7cffa6;
+    --accent-amber:   #ff8a3d;
+    --accent-haze:    #56b3c8;
+    --glow-toxic: 0 0 0 1px rgba(124, 255, 166, 0.25),
+                  0 18px 60px -10px rgba(124, 255, 166, 0.22),
+                  0 30px 80px -20px rgba(0, 0, 0, 0.85);
+    --ease-out:   cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+    --panel-pad:  clamp(0.7rem, 1.8vw, 1rem);
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  html, body {
+    height: 100vh;
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow: hidden;
+  }
+  
+  body { position: relative; }
+  
+  /* ===== Atmospheric layers ===== */
+  
+  /* 
+    FIX: z-index set to 0 (not -2) so it sits above <body> background colour.
+    position: fixed + inset: 0 fills the whole viewport.
+    The image must be in the same folder as your HTML, named exactly: sky.jpeg
+  */
+  .bg-image {
+    position: fixed;
+    inset: 0;
+    z-index: 0;                          /* ← was -2, now 0 */
+    background: url('sky.jpeg') center center / cover no-repeat;
+    /* Fallback colour — if you see this grey, the filename/path is wrong */
+    background-color: #3a3a3a;
+  filter: brightness(0.62) saturate(0.9);
+    pointer-events: none;
+  }
+  
+  /* Dark colour tint + tonal wash sitting on top of the photo */
+  .bg-tint {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+    radial-gradient(ellipse at 24% 18%, rgba(120, 145, 170, 0.20), transparent 58%),
+    radial-gradient(ellipse at 82% 86%, rgba(205, 145, 95, 0.16),  transparent 56%),
+      linear-gradient(180deg,
+      rgba(20, 29, 40, 0.58) 0%,
+      rgba(15, 22, 31, 0.64) 58%,
+      rgba(10, 15, 22, 0.66) 100%
+      );
+  }
+  
+  /* Slow drifting CSS fog overlay */
+  .fog-drift {
+    position: fixed;
+    inset: -20%;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0.55;
+    background:
+      radial-gradient(ellipse 50% 35% at 30% 60%, rgba(140, 180, 150, 0.10), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 70% 40%, rgba(200, 130,  80, 0.08), transparent 60%),
+      radial-gradient(ellipse 45% 30% at 50% 80%, rgba(120, 140, 160, 0.10), transparent 60%);
+    mix-blend-mode: screen;
+    filter: blur(40px);
+    animation: fogShift 45s ease-in-out infinite alternate;
+  }
+  
+  #smogCanvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+  
+  /* CSS vignette sitting above the canvas */
+  .vignette {
+    position: fixed;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(255, 255, 255, 0)   45%,
+      rgba( 94, 108, 124, 0.18) 80%,
+      rgba( 76,  86,  98, 0.28) 100%
+    );
+  }
+  
+  .grain {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0.06;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+  
+  /* ===== Layout ===== */
+  .container {
+    position: relative;
+    z-index: 6;                          /* ← above all fixed overlays */
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: clamp(2.5rem, 6vh, 5rem) clamp(1.5rem, 5vw, 3.5rem) clamp(2rem, 4vh, 3.5rem);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* ===== Hero ===== */
+  .hero {
+    padding-left: var(--panel-pad);
+    margin-bottom: clamp(1.75rem, 3vh, 3rem);
+    animation: rise 1.4s var(--ease-out) both;
+  }
+  
+  h1 {
+    font-size: clamp(2rem, 5.2vw, 4.2rem);
+    font-weight: 200;
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    color: var(--text);
+    background: linear-gradient(180deg, #ffffff 0%, #b8c5d3 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .hero-em {
+    display: block;
+    font-weight: 400;
+    background: linear-gradient(135deg, #7cffa6 0%, #56b3c8 50%, #ff8a3d 110%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+  
+  .subtitle {
+    margin-top: 1rem;
+    max-width: 560px;
+    font-size: clamp(0.95rem, 1.1vw, 1.05rem);
+    font-weight: 400;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.94);
+    text-shadow: 0 1px 8px rgba(7, 12, 20, 0.45);
+  }
+  
+  /* ===== Grid + Glassmorphism Cards ===== */
+  .grid {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 1rem;
+    align-content: center;
+  padding: var(--panel-pad);
+  border-radius: 22px;
+  background: rgba(8, 14, 22, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 16px 44px -24px rgba(0, 0, 0, 0.85);
+  }
+  
+  .graph-card {
+    --i: 0;
+    position: relative;
+    display: block;
+    padding: 1.5rem 1.4rem 1.4rem;
+    min-height: clamp(180px, 28vh, 240px);
+    border-radius: 18px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    text-decoration: none;
+    color: inherit;
+    overflow: hidden;
+    isolation: isolate;
+    transform: translateY(0);
+    transition: all 0.3s ease;
+    animation: cardIn 0.9s var(--ease-out) both;
+    animation-delay: calc(0.2s + var(--i) * 0.08s);
+  }
+  
+  .graph-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 45%),
+      radial-gradient(120% 80% at 0% 0%, rgba(124, 255, 166, 0.05), transparent 60%);
+    pointer-events: none;
+    z-index: -1;
+    transition: opacity 0.6s var(--ease-out);
+  }
+  
+  .graph-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg,
+      rgba(124, 255, 166, 0.55) 0%,
+      rgba( 86, 179, 200, 0.30) 50%,
+      rgba(255, 138,  61, 0.45) 100%
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask:         linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.6s var(--ease-out);
+  }
+  
+  .graph-card:hover {
+    transform: translateY(-4px);
+    background: var(--glass-bg-hover);
+    border-color: rgba(86, 179, 200, 0.45);
+    box-shadow:
+      0 0 0 1px rgba(86, 179, 200, 0.28),
+      0 12px 32px -14px rgba(86, 179, 200, 0.42),
+      0 14px 28px -18px rgba(0, 0, 0, 0.9);
+  }
+  
+  .graph-card:hover::after  { opacity: 1; }
+  .graph-card:active        { transform: translateY(-2px); transition-duration: 0.2s; }
+
+  .card-icon {
+    position: absolute;
+    left: 50%;
+    top: 5%;
+    width: 80px;
+    height: 80px;
+    transform: translateX(-50%);
+    opacity: 0.12;
+    color: rgba(207, 235, 248, 0.95);
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease, color 0.3s ease;
+  }
+
+  .graph-card:hover .card-icon {
+    opacity: 0.16;
+    transform: translate(-50%, -2px);
+    color: rgba(124, 255, 166, 0.95);
+  }
+  
+  .card-index {
+    position: absolute;
+    top: 1.35rem;
+    right: 1.5rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    font-feature-settings: "tnum";
+    transition: color 0.4s ease;
+  }
+  
+  .graph-card:hover .card-index { color: var(--accent-toxic); }
+  
+  .card-content {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 0.45rem;
+  }
+  
+  .meta-tag {
+    display: inline-flex;
+    align-items: center;
+    width: max-content;
+    font-size: 0.68rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    transition: color 0.4s ease;
+  }
+  
+  .meta-tag::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-toxic);
+    box-shadow: 0 0 8px rgba(124, 255, 166, 0.7);
+    margin-right: 0.55rem;
+  }
+  
+  .graph-card:hover .meta-tag { color: var(--text-soft); }
+  
+  .graph-card h2 {
+    font-size: clamp(1.15rem, 1.5vw, 1.35rem);
+    font-weight: 500;
+    line-height: 1.25;
+    letter-spacing: -0.012em;
+    color: var(--text);
+    transition: transform 0.6s var(--ease-out);
+  }
+  
+  .graph-card:hover h2 { transform: translateY(-2px); }
+  
+  .card-cta {
+    margin-top: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-soft);
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+      opacity   0.5s var(--ease-out),
+      transform 0.6s var(--ease-out),
+      color     0.4s ease;
+  }
+  
+  .card-cta svg { transition: transform 0.5s var(--ease-out); }
+  
+  .graph-card:hover .card-cta {
+    opacity: 1;
+    transform: translateY(0);
+    color: var(--accent-toxic);
+  }
+  
+  .graph-card:hover .card-cta svg { transform: translateX(4px); }
+  
+  /* ===== Animations ===== */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(24px); filter: blur(6px); }
+    to   { opacity: 1; transform: translateY(0);    filter: blur(0);   }
+  }
+  
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(28px); filter: blur(8px); }
+    to   { opacity: 1; transform: translateY(0);    filter: blur(0);   }
+  }
+  
+  @keyframes bgDrift {
+    0%   { transform: scale(1.08) translate3d(0,     0,    0); }
+    50%  { transform: scale(1.12) translate3d(-1.2%, -0.8%, 0); }
+    100% { transform: scale(1.10) translate3d(1%,    0.6%, 0); }
+  }
+  
+  @keyframes fogShift {
+    0%   { transform: translate3d(0,   0,   0) scale(1);    }
+    50%  { transform: translate3d(-3%, 2%,  0) scale(1.08); }
+    100% { transform: translate3d(2%,  -2%, 0) scale(1.04); }
+  }
+  
+  /* ===== Responsive ===== */
+  @media (max-width: 1100px) {
+    .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  
+  @media (max-width: 760px) {
+    html, body { height: auto; min-height: 100vh; overflow-y: auto; overflow-x: hidden; }
+    .container  { height: auto; min-height: 100vh; padding: 2.5rem 1.25rem 2.5rem; }
+    .grid       { grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 0.85rem; }
+    .graph-card { min-height: 160px; padding: 1.25rem 1.2rem 1.2rem; }
+    .card-content { min-height: 130px; }
+  }
+  
+  @media (max-width: 460px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
+  
+  .graph-card:focus-visible {
+    outline: 2px solid var(--accent-toxic);
+    outline-offset: 4px;
+  }

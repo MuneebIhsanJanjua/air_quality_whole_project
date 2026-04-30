@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Temperature & Wind Dashboard</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
+<style>
+body{
+    margin:0;
+    font-family: 'Segoe UI', sans-serif;
+    background: url("background.jpg") no-repeat center center fixed;
+    background-size: cover;
+}
+
+body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    background: rgba(0,0,0,0.25);
+    z-index:0;
+    pointer-events:none;
+}
+
+.container{
+    position:relative;
+    z-index:2;
+    width:96%;
+    margin:auto;
+    padding:14px 18px;
+}
+
+h1{
+    text-align:center;
+    color:white;
+    font-size:28px;
+    margin:10px 0 16px 0;
+}
+
+h2{
+    text-align:center;
+    color:white;
+    font-size:22px;
+    margin:8px 0 12px 0;
+}
+
+.nav{
+    text-align:center;
+    margin-bottom:12px;
+}
+
+.nav button{
+    padding:8px 16px;
+    margin:4px;
+    background:#00070cf6;
+    color:white;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:14px;
+}
+
+.nav button:hover{
+    background:#ff3b3b;
+}
+
+.card{
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(10px);
+    border-radius:20px;
+    padding:18px;
+    margin:18px auto 0 auto;
+    border:1px solid rgba(255,255,255,0.15);
+    max-width:1300px;
+}
+
+svg{
+    display:block;
+    margin:auto;
+}
+
+.tooltip{
+    position: fixed;
+    background: #ff3b3b;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 999999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.legend{
+    text-align:center;
+    color:white;
+    margin-bottom:8px;
+    font-size:14px;
+}
+
+.legend-box{
+    display:inline-block;
+    width:14px;
+    height:14px;
+    border-radius:3px;
+    margin-right:6px;
+    vertical-align:middle;
+}
+
+.temp-color{
+    background:#ff6b35;
+}
+
+.wind-color{
+    background:#4dabf7;
+}
+
+@media (max-width: 1000px){
+    svg{
+        width:100%;
+        height:auto;
+    }
+}
+.dashboard-layout{
+    display:flex;
+    gap:22px;
+    align-items:flex-start;
+    margin-top:18px;
+}
+
+.side-panel{
+    width:200px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+}
+
+.chart-panel{
+    flex:1;
+}
+
+.info-card{
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(10px);
+    border-radius:16px;
+    padding:16px;
+    color:white;
+    border:1px solid rgba(255,255,255,0.15);
+}
+
+.info-card h3{
+    margin:0 0 12px 0;
+    font-size:18px;
+    color:white;
+}
+
+.info-card p{
+    margin:8px 0;
+    line-height:1.5;
+}
+
+.legend-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:10px;
+}
+
+@media (max-width: 1100px){
+    .dashboard-layout{
+        flex-direction:column;
+    }
+
+    .side-panel{
+        width:100%;
+        flex-direction:row;
+        flex-wrap:wrap;
+    }
+
+    .info-card{
+        flex:1 1 250px;
+    }
+}
+.home-btn{
+    position:fixed;
+    top:14px;
+    left:14px;
+    z-index:999999;
+    background: rgba(0,0,0,0.45);
+    color:white;
+    text-decoration:none;
+    padding:8px 14px;
+    border-radius:10px;
+    font-size:14px;
+    font-weight:600;
+    border:1px solid rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+}
+
+.home-btn:hover{
+    background: rgba(255,255,255,0.18);
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1> Temperature & Wind Dashboard </h1>
+
+    <div class="nav">
+        <button onclick="setCountry('india')">India</button>
+        <button onclick="setCountry('usa')">USA</button>
+    </div>
+
+    <div class="nav">
+        <button onclick="setTime('month')">Month</button>
+        <button onclick="setTime('quarter')">Quarter</button>
+        <button onclick="setTime('year')">Year</button>
+    </div>
+
+   <div class="dashboard-layout">
+
+    <div class="side-panel">
+
+        <div class="info-card">
+            <h3>Weather</h3>
+            <div class="legend-item">
+                <span class="legend-box temp-color"></span>
+                <span>Temperature</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-box wind-color"></span>
+                <span>Wind Speed</span>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <h3>Quick Status</h3>
+            <p><strong>Avg Temp:</strong> <span id="avgTemp">--</span></p>
+            <p><strong>Avg Wind:</strong> <span id="avgWind">--</span></p>
+            <p><strong>Peak Period:</strong> <span id="peakPeriod">--</span></p>
+            <p><strong>Max Total:</strong> <span id="maxTotal">--</span></p>
+        </div>
+
+
+    </div>
+
+    <div class="chart-panel">
+        <div class="card">
+            <h2 id="chartTitle">INDIA - Monthly Data</h2>
+            <svg id="mainChart" width="1100" height="500"></svg>
+        </div>
+    </div>
+
+</div>
+
+</div>
+
+<div class="tooltip"></div>
+
+<script src="script.js"></script>
+</body>
+<a href="../index.html" class="home-btn">← Home</a>
+</html>

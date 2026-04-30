@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>India and USA Air Pollution</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-image: url('background.jpg'); background-size: cover; margin: 0; color: white; }
+h1 { text-align: center; color: black; text-shadow: 2px 2px 8px #000; }
+.controls { display: flex; justify-content: center; gap: 10px; margin: 10px; }
+.toggle-btn { padding: 8px 16px; border: none; border-radius: 6px; background: black; color: white; cursor: pointer; }
+.active { background: white; color: black; }
+.main-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 35px;
+  position: relative;
+}
+#mapid {
+  height: 520px;
+  width: 900px;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px black;
+  background: white;
+}
+#sidebar { width: 320px; background: white; color: black; border-radius: 16px; padding: 20px; overflow-y: auto; max-height: 600px; }
+#sidebar h2, #sidebar h3 { margin-top: 0; font-size: 21px; border-bottom: 2px solid black; padding-bottom: 7px; }
+.list-item { padding: 13px 0; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; }
+.list-item:last-child { border-bottom: none; }
+.rank-number { font-size: 15px; font-weight: bold; color: #1976d2; background: #e3f2fd; border-radius: 5px; padding: 2px 8px; margin-right: 8px; min-width: 28px; text-align: center; }
+.aqi-badge { padding: 2px 8px; border-radius: 5px; font-weight: bold; color: black; font-size: 13px; margin-left: 7px;}
+.custom-tooltip { position: absolute; pointer-events: none; z-index: 1000; background: white; color: black; border-radius: 8px; font-size: 15px; font-weight: 500; padding: 14px 16px; box-shadow: 0 8px 25px black; opacity: 0; transition: opacity 0.17s; }
+.city-label, .city-label-foreground { font-size: 13px; font-weight: 600; pointer-events: none; text-anchor: middle; dominant-baseline: middle; }
+.city-label { fill: black; stroke: white; stroke-width: 2.5px; paint-order: stroke; }
+.city-label-foreground { fill: black; stroke: none; }
+#city-details { display:none; position: absolute; top: 30px; left: 30px; z-index: 1100; background: #222; color: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px #000; min-width: 220px; max-width: 340px; font-size: 16px; opacity: 0.98; }
+#city-details h2 { margin-top: 0; font-size: 20px; color: white; }
+@media (max-width: 1100px) { #city-details { left: 8px; top: 8px; max-width: 98vw; } }
+#aqi-controls { display: flex; align-items: center; gap: 10px; }
+#aqi-controls label { color: black; }
+.year-controls { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 10px 0 2px 0; }
+.year-controls label { color: black; }
+.home-btn {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 1200;
+  padding: 8px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(17, 24, 39, 0.15);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+.home-btn:hover { background: rgba(17, 24, 39, 0.3); }
+
+/* --- Legend list for global mode --- */
+.legend-list {
+  min-width: 210px;
+  max-width: 230px;
+  background: rgba(255,255,255,0.96);
+  color: #222;
+  border-radius: 12px;
+  padding: 18px 20px 15px 20px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+  font-size: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  border: 1.5px solid #ececec;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.legend-list-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 3px;
+  color: #333;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 5px;
+}
+
+.legend-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.legend-list-color {
+  width: 28px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid #888;
+  display: inline-block;
+}
+
+
+#legend-bar { display: none !important; }
+
+/* Adjustment of layout and screen size */
+@media (max-width: 1250px) {
+  .main-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .legend-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100vw;
+    margin-bottom: 18px;
+    margin-left: 0;
+    margin-right: 0;
+    position: static;
+  }
+  #mapid {
+    width: 100%;
+    min-width: 0;
+  }
+  #sidebar {
+    width: auto;
+    min-width: 0;
+    max-width: 100vw;
+  }
+}
+</style>
+</head>
+<body>
+<a href="../index.html" class="home-btn">← Home</a>
+<h1>India and USA Air Pollution</h1>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <button id="btn-global" class="toggle-btn active" onclick="switchMode('global')">Global</button>
+  <button id="btn-local" class="toggle-btn" onclick="switchMode('local')">Local</button>
+</div>
+<div class="controls">
+  <button id="btn-india" onclick="updateView('india')">India</button>
+  <button id="btn-usa" onclick="updateView('usa')">USA</button>
+</div>
+<div class="year-controls">
+  <label for="year-select">Year:</label>
+  <select id="year-select"></select>
+</div>
+<!-- global legend: left of map/sidebar, only visible in global mode -->
+<div class="main-wrapper">
+  <div id="legend-list" class="legend-list" style="display: flex;">
+    <div class="legend-list-title">AQI (Air Pollution) Record</div>
+    <div class="legend-list-item"><span class="legend-list-color" style="background:#00e400;"></span>Good (0–50)</div>
+    <div class="legend-list-item"><span class="legend-list-color" style="background:#ffff00;"></span>Satisfactory/Moderate (51–100)</div>
+    <div class="legend-list-item"><span class="legend-list-color" style="background:#ff7e00;"></span>Moderately Polluted/Unhealthy (101–150)</div>
+    <div class="legend-list-item"><span class="legend-list-color" style="background:#ff0000;"></span>Poor Polluted/Unhealthy (151–200)</div>
+    <div class="legend-list-item"><span class="legend-list-color" style="background:#8f3f97;"></span>Very Poor/Very Unhealthy (201–300)</div>
+    <div class="legend-list-item"><span class="legend-list-color" style="background:#7e0023;"></span>Severe/Hazardous (301–500)</div>
+  </div>
+  <div id="mapid"></div>
+  <div id="sidebar">
+    <h2>City Rankings</h2>
+    <div id="data-list"></div>
+  </div>
+</div>
+<div class="controls" id="aqi-controls">
+  <div id="aqi-mode-group">
+    <label style="color:black; font-size:15px; margin-right:5px;">Air Pollution:</label>
+    <input type="radio" name="aqi-mode" id="aqi-mode-real" checked>
+    <label for="aqi-mode-real" style="margin-right:10px; font-size:15px;">Global Air Pollution</label>
+    <input type="radio" name="aqi-mode" id="aqi-mode-sim">
+    <label for="aqi-mode-sim" style="font-size:15px;">Simulation Air Pollution</label>
+  </div>
+  <input 
+    type="range" 
+    id="aqi-slider" 
+    min="0" 
+    max="500" 
+    value="0" 
+    step="1"
+    style="width: 230px; vertical-align:middle;"
+    disabled
+  >
+  <span id="aqi-slider-value" style="font-weight:bold; color:black;">0</span>
+</div>
+<div id="city-details">
+  <h2>City Details</h2>
+  <div id="city-details-content"></div>
+</div>
+<div id="d3-tooltip" class="custom-tooltip"></div>
+<script>
+let mode = 'global';
+let currentView = 'india';
+let allData = null;
+let allYears = [];
+let currentYear = null;
+let aqiMode = 'real';
+let aqiSliderValue = 0;
+let slider = null;
+let sliderValue = null;
+let storedData = null;
+
+// --- Map, Tooltip, Color Scales ---
+const map = L.map('mapid', { zoomControl: true, attributionControl: false });
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 8, attribution: 'Map data &copy; OpenStreetMap contributors' }).addTo(map);
+L.svg().addTo(map);
+map.setView([28.58, 77.2], 5);
+const tooltip = d3.select("#d3-tooltip");
+
+// Discrete color scale for legend + bubbles in global mode
+function getAQIColor(aqi) {
+  if (aqi <= 50) return "#00e400"; // Green
+  if (aqi <= 100) return "#ffff00"; // Yellow
+  if (aqi <= 150) return "#ff7e00"; // Orange
+  if (aqi <= 200) return "#ff0000"; // Red
+  if (aqi <= 300) return "#8f3f97"; // Purple
+  return "#7e0023"; // Maroon
+}
+
+// --- Switch Mode (global/local) ---
+function switchMode(m){
+  mode = m;
+  document.getElementById('btn-global').classList.toggle('active', m==='global');
+  document.getElementById('btn-local').classList.toggle('active', m==='local');
+  document.getElementById('aqi-controls').style.display = (mode==='global') ? 'flex' : 'none';
+  // Show/hide new legend
+  document.getElementById('legend-list').style.display = (mode==='global') ? 'flex' : 'none';
+  updateView(currentView, true); // always recenter map and reload on mode switch
+}
+
+// --- Country Switch ---
+function highlightCountry(view){
+  document.getElementById('btn-india').classList.toggle('active', view==='india');
+  document.getElementById('btn-usa').classList.toggle('active', view==='usa');
+}
+function updateView(view, force){
+  currentView = view;
+  highlightCountry(view);
+
+  // Center the map when switching countries
+  if (view === 'india') {
+    map.setView([28.58, 77.2], 5);
+  } else {
+    map.setView([40.7, -75.5], 4);
+  }
+
+  const file = (currentView==='india')
+    ? 'india_air_quality_datapreprocessing_final.csv'
+    : 'USA_air_quality_datapreproccessing_final.csv';
+
+  d3.csv(file).then(handleAllData);
+  d3.select("#data-list").html("Loading...");
+  d3.select('#city-details').style('display', 'none');
+}
+
+// --- CSV handler for both modes ---
+function handleAllData(data) {
+  allData = data.map(d => ({
+    city: d.city,
+    aqi: +d.aqi,
+    latitude: +d.latitude,
+    longitude: +d.longitude,
+    year: d.year ? d.year.trim() : ''
+  }));
+
+  allYears = Array.from(new Set(allData.map(d => d.year).filter(y => y))).sort();
+  const yearSelect = document.getElementById('year-select');
+  yearSelect.innerHTML = '';
+  allYears.forEach(y => {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    yearSelect.appendChild(opt);
+  });
+  currentYear = allYears[allYears.length - 1];
+  yearSelect.value = currentYear;
+  renderData();
+}
+
+// --- Year change ---
+document.getElementById('year-select').addEventListener('change', function() {
+  currentYear = this.value;
+  renderData();
+});
+
+// --- AQI Mode & Slider controls (global only) ---
+function updateAQIModeSlider(){
+  slider = document.getElementById("aqi-slider");
+  sliderValue = document.getElementById("aqi-slider-value");
+  const radioReal = document.getElementById('aqi-mode-real');
+  const radioSim = document.getElementById('aqi-mode-sim');
+  function updateMode() {
+    if (radioReal.checked) {
+      aqiMode = 'real';
+      slider.disabled = true;
+    } else {
+      aqiMode = 'sim';
+      slider.disabled = false;
+    }
+    renderData();
+  }
+  radioReal.addEventListener('change', updateMode);
+  radioSim.addEventListener('change', updateMode);
+  slider.addEventListener("input", () => {
+    aqiSliderValue = +slider.value;
+    sliderValue.textContent = aqiSliderValue;
+    if (aqiMode === 'sim') renderData();
+  });
+  // Initialize
+  aqiSliderValue = +slider.value;
+  sliderValue.textContent = aqiSliderValue;
+  updateMode();
+}
+window.addEventListener("DOMContentLoaded", updateAQIModeSlider);
+
+// --- Render Data: dispatch to global/local logic ---
+function renderData(){
+  if(mode === 'global'){
+    renderGlobal();
+  } else {
+    renderLocal();
+  }
+}
+
+// --- Render: Global mode ---
+function renderGlobal() {
+  d3.select("#mapid").select("svg").selectAll("g").remove();
+  // Filter by year
+  const yearData = allData.filter(d => d.year === currentYear);
+
+  // Compute per city AQI
+  const processed = d3.groups(yearData, d => d.city).map(([name, values]) => ({
+    city: name,
+    lat: d3.mean(values, d => +d.latitude),
+    lon: d3.mean(values, d => +d.longitude),
+    avgAqi: aqiMode === 'sim' ? aqiSliderValue : d3.mean(values, d => +d.aqi),
+    maxAqi: d3.max(values, d => +d.aqi)
+  }))
+  .sort((a, b) => b.avgAqi - a.avgAqi);
+
+  // --- Sidebar: rankings ---
+  const list = d3.select("#data-list").html("");
+  processed.forEach((d, i) => {
+    const item = list.append("div").attr("class", "list-item");
+    item.append("span")
+      .attr("class", "rank-number")
+      .text(i + 1);
+    item.append("strong").text(`${d.city} (${currentYear}) `);
+    item.append("span")
+      .html(`Avg: <span class="aqi-badge" style="background:${getAQIColor(d.avgAqi)}">${Math.round(d.avgAqi)}</span> `);
+    if (aqiMode === 'real') {
+      item.append("span")
+        .html(`Peak: <span class="aqi-badge" style="background:${getAQIColor(d.maxAqi)}">${Math.round(d.maxAqi)}</span>`);
+    }
+    item.on("click", () => showCityDetailsGlobal(d));
+  });
+
+  // --- D3 Overlay (bubbles, labels) ---
+  const svg = d3.select("#mapid").select("svg");
+  const g = svg.append("g").attr("class", "d3-overlay-layer");
+  function projectPoint(lat, lon) {
+    return map.latLngToLayerPoint([lat, lon]);
+  }
+  const baseRadius = (currentView === 'india') ? 15 : 18;
+  const scaleRadius = (currentView === 'india') ? 60 : 40;
+
+  const cityGroups = g.selectAll(".city-group")
+    .data(processed, d => d.city)
+    .join("g")
+    .attr("class", "city-group")
+    .attr("pointer-events", "all")
+    .on("click", function(event, d) {
+      showCityDetailsGlobal(d);
+      event.stopPropagation();
+    });
+
+  function positionCities() {
+    cityGroups.each(function(d) {
+      const pt = projectPoint(d.lat, d.lon);
+      d3.select(this).attr("transform", `translate(${pt.x},${pt.y})`);
+    });
+  }
+
+  cityGroups.selectAll("circle")
+    .data(d => [d])
+    .join("circle")
+    .attr("class", "city-bubble")
+    .attr("r", d => baseRadius + d.avgAqi / scaleRadius)
+    .attr("fill", d => getAQIColor(d.avgAqi))
+    .attr("stroke", "#fff")
+    .attr("stroke-width", 2.5)
+    .attr("opacity", 0.85)
+    .on("mouseover", function(event, d) {
+      d3.select(this).transition().duration(120).attr("r", baseRadius * 1.45 + d.avgAqi / scaleRadius);
+      tooltip
+        .style("opacity", 1)
+        .html(`<strong>${d.city}</strong><br>Avg AQI: <b>${Math.round(d.avgAqi)}</b>${aqiMode === 'real' ? `<br>Peak AQI: <b>${d.maxAqi}</b>` : ''}<br>Year: <b>${currentYear}</b>`)
+        .style("left", (event.pageX + 16) + "px")
+        .style("top", (event.pageY - 30) + "px");
+    })
+    .on("mousemove", function(event) {
+      tooltip
+        .style("left", (event.pageX + 16) + "px")
+        .style("top", (event.pageY - 30) + "px");
+    })
+    .on("mouseout", function(event, d) {
+      d3.select(this).transition().duration(120).attr("r", baseRadius + d.avgAqi / scaleRadius);
+      tooltip.style("opacity", 0);
+    });
+
+  cityGroups.selectAll("text.city-label")
+    .data(d => [d])
+    .join("text")
+    .attr("class", "city-label")
+    .attr("y", d => baseRadius + 17 + d.avgAqi / scaleRadius)
+    .text(d => d.city);
+
+  cityGroups.selectAll("text.city-label-foreground")
+    .data(d => [d])
+    .join("text")
+    .attr("class", "city-label-foreground")
+    .attr("y", d => baseRadius + 17 + d.avgAqi / scaleRadius)
+    .text(d => d.city);
+
+  map.on("moveend", positionCities);
+  positionCities();
+}
+
+function showCityDetailsGlobal(d) {
+  let html = `<b style='font-size:18px;'>${d.city}</b> <span style='font-size:15px;'>(Year: ${currentYear})</span><br>` +
+    `Average AQI: <span class='aqi-badge' style='background:${getAQIColor(d.avgAqi)}'>${Math.round(d.avgAqi)}</span>`;
+  if (aqiMode === 'real') {
+    html += `<br>Peak AQI: <span class='aqi-badge' style='background:${getAQIColor(d.maxAqi)}'>${Math.round(d.maxAqi)}</span>`;
+  }
+  d3.select('#city-details').style('display', 'block');
+  d3.select('#city-details-content').html(html);
+}
+
+// --- Render: Local mode ---
+function renderLocal() {
+  d3.select("#mapid").select("svg").selectAll("g").remove();
+  // Filter by year
+  const yearData = allData.filter(d => d.year === currentYear);
+
+  function colorByRank(idx, total) {
+    if (total <= 1) return "#ff0000";
+    const t = idx / (total - 1);
+    if (t <= 0.5) {
+      return d3.interpolateRgb("#ff0000", "#ffff00")(t * 2);
+    } else {
+      return d3.interpolateRgb("#ffff00", "#00e400")((t - 0.5) * 2);
+    }
+  }
+  const processed = d3.groups(yearData, d => d.city).map(([name, values]) => ({
+      city: name,
+      lat: d3.mean(values, d => d.latitude),
+      lon: d3.mean(values, d => d.longitude),
+      avgAqi: d3.mean(values, d => d.aqi)
+    }))
+    .sort((a, b) => b.avgAqi - a.avgAqi);
+  const total = processed.length;
+
+  // --- Sidebar: rankings ---
+  const list = d3.select("#data-list").html("");
+  processed.forEach((d, idx) => {
+    const badgeColor = colorByRank(idx, total);
+    const rank = idx + 1;
+    const item = list.append("div").attr("class", "list-item");
+    item.append("span")
+      .attr("class", "rank-number")
+      .text(rank);
+    item.append("span")
+      .html(`<strong>${d.city}</strong> Air Pollution Number: <span class="aqi-badge" style="background:${badgeColor}">${Math.round(d.avgAqi)}</span>`);
+    item.on("click", () => showCityDetailsLocal(d, badgeColor));
+  });
+
+  // --- D3 Overlay (bubbles, labels) ---
+  const svg = d3.select("#mapid").select("svg");
+  const g = svg.append("g").attr("class", "d3-overlay-layer");
+  function projectPoint(lat, lon) {
+    return map.latLngToLayerPoint([lat, lon]);
+  }
+  const baseRadius = (currentView === 'india') ? 15 : 18;
+  const scaleRadius = (currentView === 'india') ? 60 : 40;
+  processed.forEach((d, idx) => d._color = colorByRank(idx, total));
+  const cityGroups = g.selectAll(".city-group")
+    .data(processed, d => d.city)
+    .join("g")
+    .attr("class", "city-group")
+    .attr("pointer-events", "all")
+    .on("click", function(event, d) {
+      showCityDetailsLocal(d, d._color);
+      event.stopPropagation();
+    });
+
+  function positionCities() {
+    cityGroups.each(function(d) {
+      const pt = projectPoint(d.lat, d.lon);
+      d3.select(this).attr("transform", `translate(${pt.x},${pt.y})`);
+    });
+  }
+
+  cityGroups.selectAll("circle")
+    .data(d => [d])
+    .join("circle")
+    .attr("class", "city-bubble")
+    .attr("r", d => baseRadius + d.avgAqi / scaleRadius)
+    .attr("fill", d => d._color)
+    .attr("stroke", "#fff")
+    .attr("stroke-width", 2.5)
+    .attr("opacity", 0.85)
+    .on("mouseover", function(event, d) {
+      d3.select(this).transition().duration(120).attr("r", baseRadius * 1.45 + d.avgAqi / scaleRadius);
+      tooltip
+        .style("opacity", 1)
+        .html(`<strong>${d.city}</strong><br>Avg AQI: <b>${Math.round(d.avgAqi)}</b><br>Year: <b>${currentYear}</b>`)
+        .style("left", (event.pageX + 16) + "px")
+        .style("top", (event.pageY - 30) + "px");
+    })
+    .on("mousemove", function(event) {
+      tooltip
+        .style("left", (event.pageX + 16) + "px")
+        .style("top", (event.pageY - 30) + "px");
+    })
+    .on("mouseout", function(event, d) {
+      d3.select(this).transition().duration(120).attr("r", baseRadius + d.avgAqi / scaleRadius);
+      tooltip.style("opacity", 0);
+    });
+
+  cityGroups.selectAll("text.city-label")
+    .data(d => [d])
+    .join("text")
+    .attr("class", "city-label")
+    .attr("y", d => baseRadius + 17 + d.avgAqi / scaleRadius)
+    .text(d => d.city);
+
+  cityGroups.selectAll("text.city-label-foreground")
+    .data(d => [d])
+    .join("text")
+    .attr("class", "city-label-foreground")
+    .attr("y", d => baseRadius + 17 + d.avgAqi / scaleRadius)
+    .text(d => d.city);
+
+  map.on("moveend", positionCities);
+  positionCities();
+}
+
+function showCityDetailsLocal(d, badgeColor) {
+  let html = `<b style='font-size:18px;'>${d.city}</b><br>` +
+    `Average AQI: <span class='aqi-badge' style='background:${badgeColor}'>${Math.round(d.avgAqi)}</span>`;
+  d3.select('#city-details').style('display', 'block');
+  d3.select('#city-details-content').html(html);
+}
+
+// --- Hide city details panel when background is clicked ---
+d3.select('body').on('click', function(event) {
+  if (!event.target.closest('.city-group') && !event.target.closest('#city-details') && !event.target.closest('.list-item')) {
+    d3.select('#city-details').style('display', 'none');
+  }
+});
+window.addEventListener('scroll', () => tooltip.style("opacity", 0));
+window.addEventListener('resize', () => tooltip.style("opacity", 0));
+
+// --- INIT ---
+updateView('india');
+</script>
+</body>
+</html>

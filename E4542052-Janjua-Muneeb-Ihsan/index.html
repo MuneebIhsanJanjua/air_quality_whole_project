@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AQI Dashboard</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body id="app-body" class="page-india">
+    <a href="../index.html" class="home-btn">← Home</a>
+    <h1 id="page-title">Monthly Average AQI</h1>
+
+    <div class="nav-row">
+        <div class="filter-bar">
+            <button id="btn-india" class="filter-btn active-india" onclick="drawChart('india')">🇮🇳 India</button>
+            <button id="btn-usa" class="filter-btn" onclick="drawChart('usa')">🇺🇸 USA</button>
+            <button id="btn-both" class="filter-btn" onclick="drawChart('both')">Both</button>
+        </div>
+    </div>
+
+    <!-- Images section for Both mode (above chart horizontally) -->
+
+
+    <div class="main-content">
+        <!-- Side info section for individual mode (beside chart, now on the left) -->
+        <div id="side-image-section" class="side-info" style="display: none;">
+            <div class="aqi-compare-card side-card" id="side-table-card">
+                <h3 id="side-image-title">AQI Category</h3>
+                <div id="side-info-table-container"></div>
+            </div>
+        </div>
+
+        <!-- Chart Section -->
+        <div class="chart-card-wrapper">
+            <div class="card chart-card">
+                <p class="chart-title" id="chart-lbl">Temporal Air Quality Trends — India vs USA</p>
+                <div class="svg-container">
+                    <svg id="chart-svg" width="1000" height="600"></svg>
+                </div>
+                <p id="status"></p>
+            </div>
+            <div id="aqi-both-btns" class="aqi-both-btns" style="display:none;">
+                <button class="aqi-cat-btn aqi-cat-btn--india" onclick="openAqiModalFor('India_aqi_category.webp','India AQI Category')">🇮🇳 India AQI Category</button>
+                <button class="aqi-cat-btn aqi-cat-btn--usa" onclick="openAqiModalFor('usa_air_qaulity_index.png','USA AQI Category')">🇺🇸 USA AQI Category</button>
+            </div>
+        </div>
+    </div>
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <!-- AQI Category Modal -->
+    <div id="aqi-modal-overlay" class="aqi-modal-overlay" onclick="closeAqiModal()">
+        <div class="aqi-modal" onclick="event.stopPropagation()">
+            <button class="aqi-modal-close" onclick="closeAqiModal()">✕</button>
+            <h3 id="aqi-modal-title">AQI Category</h3>
+            <img id="aqi-modal-img" src="" alt="AQI Category">
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
